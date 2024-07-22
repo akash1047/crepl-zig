@@ -1,3 +1,6 @@
+const std = @import("std");
+const mem = std.mem;
+
 pub const Token = enum {
     ILLEGAL,
     EOF,
@@ -116,6 +119,49 @@ pub const Token = enum {
     HASH_PRAGMA, //  #pragma
     HASH_DEFINED, //  #defined
 };
+
+const KEYWORDS = [_]struct { tok: Token, lit: []const u8 }{
+    .{ .tok = Token.KW_AUTO, .lit = "auto" },
+    .{ .tok = Token.KW_BREAK, .lit = "break" },
+    .{ .tok = Token.KW_CASE, .lit = "case" },
+    .{ .tok = Token.KW_CHAR, .lit = "char" },
+    .{ .tok = Token.KW_CONST, .lit = "const" },
+    .{ .tok = Token.KW_CONTINUE, .lit = "continue" },
+    .{ .tok = Token.KW_DEFAULT, .lit = "default" },
+    .{ .tok = Token.KW_DO, .lit = "do" },
+    .{ .tok = Token.KW_DOUBLE, .lit = "double" },
+    .{ .tok = Token.KW_ELSE, .lit = "else" },
+    .{ .tok = Token.KW_ENUM, .lit = "enum" },
+    .{ .tok = Token.KW_EXTERN, .lit = "extern" },
+    .{ .tok = Token.KW_FLOAT, .lit = "float" },
+    .{ .tok = Token.KW_FOR, .lit = "for" },
+    .{ .tok = Token.KW_GOTO, .lit = "goto" },
+    .{ .tok = Token.KW_IF, .lit = "if" },
+    .{ .tok = Token.KW_INLINE, .lit = "inline" },
+    .{ .tok = Token.KW_INT, .lit = "int" },
+    .{ .tok = Token.KW_LONG, .lit = "long" },
+    .{ .tok = Token.KW_REGISTER, .lit = "register" },
+    .{ .tok = Token.KW_RESTRICT, .lit = "restrict" },
+    .{ .tok = Token.KW_RETURN, .lit = "return" },
+    .{ .tok = Token.KW_SHORT, .lit = "short" },
+    .{ .tok = Token.KW_SIGNED, .lit = "signed" },
+    .{ .tok = Token.KW_SIZEOF, .lit = "sizeof" },
+    .{ .tok = Token.KW_STATIC, .lit = "static" },
+    .{ .tok = Token.KW_STRUCT, .lit = "struct" },
+    .{ .tok = Token.KW_SWITCH, .lit = "switch" },
+    .{ .tok = Token.KW_TYPEDEF, .lit = "typedef" },
+    .{ .tok = Token.KW_UNION, .lit = "union" },
+    .{ .tok = Token.KW_UNSIGNED, .lit = "unsigned" },
+    .{ .tok = Token.KW_VOID, .lit = "void" },
+    .{ .tok = Token.KW_VOLATILE, .lit = "volatile" },
+    .{ .tok = Token.KW_WHILE, .lit = "while" },
+};
+
+pub fn lookup(ident: []const u8) Token {
+    return inline for (KEYWORDS) |l| {
+        if (mem.eql(u8, ident, l.lit)) break l.tok;
+    } else Token.IDENT;
+}
 
 const TOKEN_STRING = [102][]const u8{
     "ILLEGAL",
