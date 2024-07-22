@@ -106,18 +106,18 @@ pub const Token = enum {
     HASH, // #
     HASH_HASH, // ##
     HASH_IF, //  #if
-    HASH_ELIF, //  elif
-    HASH_ELSE, //  #else
-    HASH_ENDIF, //  #endif
-    HASH_IFDEF, //  #ifdef
-    HASH_IFNDEF, //  #ifndef
-    HASH_DEFINE, //  #define
-    HASH_UNDEF, //  #undef
-    HASH_INCLUDE, //  #include
-    HASH_LINE, //  #line
-    HASH_ERROR, //  #error
-    HASH_PRAGMA, //  #pragma
-    HASH_DEFINED, //  #defined
+    HASH_ELIF, // #elif
+    HASH_ELSE, // #else
+    HASH_ENDIF, // #endif
+    HASH_IFDEF, // #ifdef
+    HASH_IFNDEF, // #ifndef
+    HASH_DEFINE, // #define
+    HASH_UNDEF, // #undef
+    HASH_INCLUDE, // #include
+    HASH_LINE, // #line
+    HASH_ERROR, // #error
+    HASH_PRAGMA, // #pragma
+    HASH_DEFINED, // #defined
 };
 
 const KEYWORDS = [_]struct { tok: Token, lit: []const u8 }{
@@ -161,6 +161,30 @@ pub fn lookup(ident: []const u8) Token {
     return inline for (KEYWORDS) |l| {
         if (mem.eql(u8, ident, l.lit)) break l.tok;
     } else Token.IDENT;
+}
+
+const PREPROCESSORS = [_]struct { tok: Token, lit: []const u8 }{
+    .{ .tok = Token.HASH, .lit = "#" },
+    .{ .tok = Token.HASH_HASH, .lit = "##" },
+    .{ .tok = Token.HASH_IF, .lit = "#if" },
+    .{ .tok = Token.HASH_ELIF, .lit = "#elif" },
+    .{ .tok = Token.HASH_ELSE, .lit = "#else" },
+    .{ .tok = Token.HASH_ENDIF, .lit = "#endif" },
+    .{ .tok = Token.HASH_IFDEF, .lit = "#ifdef" },
+    .{ .tok = Token.HASH_IFNDEF, .lit = "#ifndef" },
+    .{ .tok = Token.HASH_DEFINE, .lit = "#define" },
+    .{ .tok = Token.HASH_UNDEF, .lit = "#undef" },
+    .{ .tok = Token.HASH_INCLUDE, .lit = "#include" },
+    .{ .tok = Token.HASH_LINE, .lit = "#line" },
+    .{ .tok = Token.HASH_ERROR, .lit = "#error" },
+    .{ .tok = Token.HASH_PRAGMA, .lit = "#pragma" },
+    .{ .tok = Token.HASH_DEFINED, .lit = "#defined" },
+};
+
+pub fn lookupPreprocessor(lit: []const u8) Token {
+    return inline for (PREPROCESSORS) |p| {
+        if (mem.eql(u8, lit, p.lit)) break p.tok;
+    } else .ILLEGAL;
 }
 
 const TOKEN_STRING = [102][]const u8{
@@ -268,7 +292,7 @@ const TOKEN_STRING = [102][]const u8{
     "#",
     "##",
     "#if",
-    "elif",
+    "#elif",
     "#else",
     "#endif",
     "#ifdef",
@@ -396,7 +420,7 @@ test "token::string" {
         .{ .t = Token.HASH, .s = "#" },
         .{ .t = Token.HASH_HASH, .s = "##" },
         .{ .t = Token.HASH_IF, .s = "#if" },
-        .{ .t = Token.HASH_ELIF, .s = "elif" },
+        .{ .t = Token.HASH_ELIF, .s = "#elif" },
         .{ .t = Token.HASH_ELSE, .s = "#else" },
         .{ .t = Token.HASH_ENDIF, .s = "#endif" },
         .{ .t = Token.HASH_IFDEF, .s = "#ifdef" },

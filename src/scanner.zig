@@ -121,7 +121,7 @@ pub const Scanner = struct {
 
         if (self.match('\\')) {
             switch (self.ch) {
-                'n', 't', 'r', '\'', '\\', 'e' => {},
+                'n', '0', 't', 'r', '\'', '\\', 'e' => {},
                 else => {
                     tok.* = .ILLEGAL;
                     self.scanError("unknown escape character `{c}`", .{self.ch});
@@ -148,7 +148,7 @@ pub const Scanner = struct {
         tok.* = .STRING;
         self.next(); // consume starting double quote "
 
-        while (self.ch != 0 or self.ch != '\"') : (self.next()) {
+        while (self.ch != 0 and self.ch != '\"') : (self.next()) {
             if (self.match('\\')) {
                 switch (self.ch) {
                     '\n', '\\', '\"' => {},
@@ -172,9 +172,6 @@ pub const Scanner = struct {
 
     fn scanIntOrFloat(self: *Scanner, tok: *Token) []const u8 {
         const mark = self.position;
-
-        if (!ascii.isDigit(self.ch)) @panic("number starts with non digit");
-
         tok.* = Token.INT;
         while (ascii.isDigit(self.ch)) : (self.next()) {}
 
@@ -244,6 +241,50 @@ pub const Scanner = struct {
                 else => .SUB,
             },
 
+            '=' => self.expect(.ASSIGN, '=', .EQUAL),
+            '!' => self.expect(.LOGICAL_NOT, '=', .NOT_EQUAL),
+
+            '*' => self.expect(.STAR, '=', .STAR_ASSIGN),
+            '/' => self.expect(.DIV, '=', .DIV_ASSIGN),
+            '%' => self.expect(.REM, '=', .REM_ASSIGN),
+            '^' => self.expect(.XOR, '=', .XOR_ASSIGN),
+            '&' => self.expect2(.AND, '&', .LOGICAL_AND, '=', .AND_ASSIGN),
+            '|' => self.expect2(.OR, '|', .LOGICAL_OR, '=', .OR_ASSIGN),
+
+            '<' => switch (self.peek()) {
+                '<' => blk: {
+                    self.next();
+                    if (self.peek() == '=') {
+                        self.next();
+                        break :blk .LEFT_SHIFT_ASSIGN;
+                    } else {
+                        break :blk .LEFT_SHIFT;
+                    }
+                },
+                '=' => blk: {
+                    self.next();
+                    break :blk .LESS_EQUAL;
+                },
+                else => .LESS_THAN,
+            },
+
+            '>' => switch (self.peek()) {
+                '>' => blk: {
+                    self.next();
+                    if (self.peek() == '=') {
+                        self.next();
+                        break :blk .RIGHT_SHIFT_ASSIGN;
+                    } else {
+                        break :blk .RIGHT_SHIFT;
+                    }
+                },
+                '=' => blk: {
+                    self.next();
+                    break :blk .GREATER_EQUAL;
+                },
+                else => .GREATER_THAN,
+            },
+
             '\'' => {
                 const lit = self.scanChar(&tok);
                 return .{ .tok = tok, .lit = lit };
@@ -251,6 +292,50 @@ pub const Scanner = struct {
 
             '\"' => {
                 const lit = self.scanString(&tok);
+                return .{ .tok = tok, .lit = lit };
+            },
+
+            '~' => .TILDE,
+            '.' => {
+                while (self.ch == '.') : (self.next()) {}
+                const count = self.position - mark;
+                const lit = self.source[mark..self.position];
+                switch (count) {
+                    1 => tok = .PERIOD,
+                    2 => {
+                        self.scanError("unknown symbol `{s}` did you ment? `.`", .{lit});
+                        tok = .ILLEGAL;
+                    },
+                    3 => tok = .ELIPSIS,
+                    else => {
+                        tok = .ILLEGAL;
+                        self.scanError("unknown symbol `{s}` Did you ment? `...`", .{lit});
+                    },
+                }
+                return .{ .tok = tok, .lit = lit };
+            },
+            '?' => .TERNARY,
+
+            '(' => .OPEN_PAREN,
+            '{' => .OPEN_CURLY,
+            '[' => .OPEN_BRACKET,
+            ')' => .CLOSE_PAREN,
+            '}' => .CLOSE_CURLY,
+            ']' => .CLOSE_BRACKET,
+
+            ':' => .COLON,
+            ',' => .COMMA,
+            ';' => .SEMICOLON,
+
+            '#' => {
+                self.next(); // consume the starting #
+
+                if (!self.match('#')) {
+                    while (ascii.isAlphabetic(self.ch)) : (self.next()) {}
+                }
+
+                const lit = self.source[mark..self.position];
+                tok = token.lookupPreprocessor(lit);
                 return .{ .tok = tok, .lit = lit };
             },
 
@@ -275,7 +360,7 @@ test "Scanner::scan" {
         .{ .t = .INT, .s = "1234567890" },
         .{ .t = .FLOAT, .s = "123.456e-789f" },
         .{ .t = .CHAR, .s = "'a'" },
-        // .{ .t = .STRING, .s = "\"A string literal.\"" },
+        .{ .t = .STRING, .s = "\"A string literal.\"" },
 
         .{ .t = .ASSIGN, .s = "=" },
         .{ .t = .ADD_ASSIGN, .s = "+=" },
@@ -372,7 +457,7 @@ test "Scanner::scan" {
         .{ .t = .HASH, .s = "#" },
         .{ .t = .HASH_HASH, .s = "##" },
         .{ .t = .HASH_IF, .s = "#if" },
-        .{ .t = .HASH_ELIF, .s = "elif" },
+        .{ .t = .HASH_ELIF, .s = "#elif" },
         .{ .t = .HASH_ELSE, .s = "#else" },
         .{ .t = .HASH_ENDIF, .s = "#endif" },
         .{ .t = .HASH_IFDEF, .s = "#ifdef" },
