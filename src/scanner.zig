@@ -9,6 +9,7 @@ pub const Errorfn = *const fn ([]const u8) void;
 
 pub const TokenPack = struct {
     tok: Token,
+    pos: usize,
     lit: []const u8,
 };
 
@@ -205,16 +206,17 @@ pub const Scanner = struct {
         while (ascii.isWhitespace(self.ch)) : (self.next()) {}
 
         var tok: Token = undefined;
+        const pos = self.position;
 
         if (ascii.isAlphabetic(self.ch)) {
             const lit = self.scanIdent();
             tok = token.lookup(lit);
-            return .{ .tok = tok, .lit = lit };
+            return .{ .tok = tok, .pos = pos, .lit = lit };
         }
 
         if (ascii.isDigit(self.ch)) {
             const lit = self.scanIntOrFloat(&tok);
-            return .{ .tok = tok, .lit = lit };
+            return .{ .tok = tok, .pos = pos, .lit = lit };
         }
 
         const mark = self.position;
@@ -287,12 +289,12 @@ pub const Scanner = struct {
 
             '\'' => {
                 const lit = self.scanChar(&tok);
-                return .{ .tok = tok, .lit = lit };
+                return .{ .tok = tok, .pos = pos, .lit = lit };
             },
 
             '\"' => {
                 const lit = self.scanString(&tok);
-                return .{ .tok = tok, .lit = lit };
+                return .{ .tok = tok, .pos = pos, .lit = lit };
             },
 
             '~' => .TILDE,
@@ -312,7 +314,7 @@ pub const Scanner = struct {
                         self.scanError("unknown symbol `{s}` Did you ment? `...`", .{lit});
                     },
                 }
-                return .{ .tok = tok, .lit = lit };
+                return .{ .tok = tok, .pos = pos, .lit = lit };
             },
             '?' => .TERNARY,
 
@@ -336,16 +338,16 @@ pub const Scanner = struct {
 
                 const lit = self.source[mark..self.position];
                 tok = token.lookupPreprocessor(lit);
-                return .{ .tok = tok, .lit = lit };
+                return .{ .tok = tok, .pos = pos, .lit = lit };
             },
 
-            0 => return .{ .tok = Token.EOF, .lit = "" },
+            0 => return .{ .tok = Token.EOF, .pos = pos, .lit = "" },
             else => Token.ILLEGAL,
         };
 
         self.next();
 
-        return .{ .tok = tok, .lit = self.source[mark..self.position] };
+        return .{ .tok = tok, .pos = pos, .lit = self.source[mark..self.position] };
     }
 };
 
